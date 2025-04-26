@@ -28,9 +28,15 @@ class UserSettings {
   // Converte um mapa (recuperado do banco de dados) para um objeto UserSettings
   factory UserSettings.fromMap(Map<String, dynamic> map) {
     return UserSettings(
-      salarioMensal: map['salarioMensal'],
-      diasTrabalho: map['diasTrabalho'],
-      horasPorDia: map['horasPorDia'],
+      salarioMensal: map['salarioMensal'] ?? 0.0, // Verificando valores nulos
+      diasTrabalho: map['diasTrabalho'] ?? 0,
+      horasPorDia: map['horasPorDia'] ?? 0.0,
     );
+  }
+
+  // Método toString para facilitar a visualização
+  @override
+  String toString() {
+    return 'UserSettings(salarioMensal: $salarioMensal, diasTrabalho: $diasTrabalho, horasPorDia: $horasPorDia)';
   }
 }

@@ -1,3 +1,4 @@
+import 'package:cagada_remunerada/services/database_helper.dart';
 import 'package:flutter/material.dart';
 import 'screens/cadastro_salario.dart';
 import 'screens/registro_atividades.dart';
@@ -11,6 +12,10 @@ import 'package:intl/date_symbol_data_local.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('pt_BR', null);
+
+  // Inicializando o banco de dados
+  await DatabaseHelper().init();
+
   runApp(MaterialApp(debugShowCheckedModeBanner: false, home: SplashScreen()));
 }
 
@@ -23,24 +28,59 @@ class _MyAppState extends State<MyApp> {
   List<Atividade> atividades = [];
   int _selectedIndex = 0;
 
-  void setUserSettings(UserSettings settings) {
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  // Carregar dados persistidos
+  void _loadData() async {
+    // Carregar as configurações do usuário
+    final userSettingsList = await DatabaseHelper().getAll('user_setting');
+    if (userSettingsList.isNotEmpty) {
+      setState(() {
+        userSettings = UserSettings.fromMap(userSettingsList.first);
+      });
+    }
+
+    // Carregar as atividades registradas
+    final atividadesList = await DatabaseHelper().getAll('atividades');
+    setState(() {
+      atividades =
+          atividadesList
+              .map((e) => Atividade.fromMap(e))
+              .toList(); // Convertendo para objetos Atividade
+    });
+  }
+
+  void setUserSettings(UserSettings settings) async {
     setState(() {
       userSettings = settings;
       _selectedIndex = 0; // Vai para Registro após cadastrar salário
     });
+
+    // Salvando as configurações no banco de dados
+    await DatabaseHelper().insert('user_setting', settings.toMap());
   }
 
-  void addAtividade(Atividade atividade) {
+  void addAtividade(Atividade atividade) async {
     setState(() {
       atividades.add(atividade);
     });
+
+    // Salvando a atividade no banco de dados
+    await DatabaseHelper().insert('atividades', atividade.toMap());
   }
 
   // Função de deletar atividade
-  void deleteAtividade(Atividade atividade) {
+  void deleteAtividade(Atividade atividade) async {
     setState(() {
       atividades.remove(atividade);
     });
+
+    // Deletando a atividade do banco de dados
+    await DatabaseHelper().delete('atividades', 'id = ?', [atividade.id]);
   }
 
   void _onNavItemTapped(int index) {
@@ -64,12 +104,8 @@ class _MyAppState extends State<MyApp> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Color(
-                  0xFF1E4708,
-                ).withOpacity(0.8), // Cor verde escura com transparência
-                Color(
-                  0xFF39EE3F,
-                ).withOpacity(0.8), // Cor verde clara com transparência
+                Color(0xFF1E4708).withOpacity(0.8),
+                Color(0xFF39EE3F).withOpacity(0.8),
               ],
               stops: [0.0, 1.0],
             ),

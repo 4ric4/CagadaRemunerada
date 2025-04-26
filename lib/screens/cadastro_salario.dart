@@ -1,3 +1,5 @@
+import 'package:cagada_remunerada/screens/registro_atividades.dart';
+import 'package:cagada_remunerada/services/database_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -44,7 +46,7 @@ class _CadastroSalarioState extends State<CadastroSalario>
     super.dispose();
   }
 
-  void _salvar() {
+  Future<void> _salvar() async {
     final salario = double.tryParse(_salarioController.text);
     final dias = int.tryParse(_diasController.text);
     final horas = double.tryParse(_horasController.text);
@@ -55,7 +57,31 @@ class _CadastroSalarioState extends State<CadastroSalario>
         diasTrabalho: dias,
         horasPorDia: horas,
       );
+
+      // Salvar no banco de dados
+      final dbHelper = DatabaseHelper();
+      await dbHelper.insert("user_setting", {
+        "salario": salario,
+        "dias_trabalho": dias,
+        "horas_por_dia": horas,
+      });
+
       widget.onSave(settings);
+
+      // Usar Future.delayed para atrasar a navegação
+      Future.delayed(Duration(milliseconds: 300), () {
+        // Navegar para a próxima tela após salvar
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => RegistroAtividades(
+                  userSettings: settings,
+                  onAdd: (atividade) {},
+                ),
+          ),
+        );
+      });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Preencha todos os campos corretamente")),

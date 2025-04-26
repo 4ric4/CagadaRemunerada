@@ -1,85 +1,177 @@
-import 'dart:convert'; // Para converter dados para String e vice-versa
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Para Web
-import 'package:sqflite/sqflite.dart'; // Para SQLite no mobile
-import 'package:sqflite_common_ffi/sqflite_ffi.dart'; // Para SQLite na Web
+import 'package:sqflite/sqflite.dart' as sqflite;
+import 'package:idb_shim/idb.dart' as idb;
+import 'package:idb_shim/idb_browser.dart' as idb_browser;
 
-class DatabaseHelper {
-  Database? _db;
+/// Interface
+abstract class StorageService {
+  Future<void> init();
+  Future<void> insert(String table, Map<String, dynamic> data);
+  Future<List<Map<String, dynamic>>> getAll(String table);
+  Future<void> update(
+    String table,
+    Map<String, dynamic> data,
+    String where,
+    List whereArgs,
+  );
+  Future<void> delete(String table, String where, List whereArgs);
+}
 
-  // Instancia o banco de dados dependendo do ambiente
-  Future<Database> getDatabase() async {
+/// Implementação do Storage para Mobile/Web
+class DatabaseHelper implements StorageService {
+  sqflite.Database? _sqliteDb;
+  idb.Database? _indexedDb;
+  final idb.IdbFactory _idbFactory = idb_browser.idbFactoryBrowser;
+
+  @override
+  Future<void> init() async {
     if (kIsWeb) {
-      // Web: Usamos SharedPreferences ou IndexedDB
-      return Future.value(
-        null,
-      ); // Não usaremos SQLite aqui, ou podemos usar localStorage
+      if (_indexedDb == null) {
+        _indexedDb = await _idbFactory.open(
+          'atividades_db',
+          version: 1,
+          onUpgradeNeeded: (e) {
+            final db = e.database;
+            if (!db.objectStoreNames.contains('atividades')) {
+              db.createObjectStore('atividades', autoIncrement: true);
+            }
+            if (!db.objectStoreNames.contains('user_setting')) {
+              db.createObjectStore('user_setting', autoIncrement: true);
+            }
+            if (!db.objectStoreNames.contains('historico')) {
+              db.createObjectStore('historico', autoIncrement: true);
+            }
+            if (!db.objectStoreNames.contains('cadastro_salario')) {
+              db.createObjectStore('cadastro_salario', autoIncrement: true);
+            }
+            if (!db.objectStoreNames.contains('registro_atividade')) {
+              db.createObjectStore('registro_atividade', autoIncrement: true);
+            }
+          },
+        );
+      }
     } else {
-      // Mobile: Usamos SQLite
-      if (_db == null) {
-        _db = await openDatabase(
+      if (_sqliteDb == null) {
+        _sqliteDb = await sqflite.openDatabase(
           'atividade.db',
           version: 1,
-          onCreate: (db, version) {
-            db.execute('''
+          onCreate: (db, version) async {
+            await db.execute('''
               CREATE TABLE atividades(
-                id INTEGER PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 tipo TEXT,
                 valor REAL,
                 duracaoMinutos INTEGER,
                 data TEXT
               )
             ''');
+            await db.execute('''
+              CREATE TABLE user_setting(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                key TEXT,
+                value TEXT
+              )
+            ''');
+            await db.execute('''
+              CREATE TABLE historico(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                descricao TEXT,
+                data TEXT
+              )
+            ''');
+            await db.execute('''
+              CREATE TABLE cadastro_salario(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                salario REAL,
+                dataInicio TEXT
+              )
+            ''');
+            await db.execute('''
+              CREATE TABLE registro_atividade(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                atividadeId INTEGER,
+                dataRegistro TEXT
+              )
+            ''');
           },
         );
       }
-      return _db!;
     }
   }
 
-  // Salva dados no banco SQLite ou SharedPreferences
-  Future<void> saveData(String tipo, String valor) async {
+  @override
+  Future<void> insert(String table, Map<String, dynamic> data) async {
+    await init(); // Garantindo que o banco foi inicializado
+
     if (kIsWeb) {
-      // Web: Armazenar no SharedPreferences (ou IndexedDB)
-      final prefs = await SharedPreferences.getInstance();
-      List<Map<String, dynamic>> atividades =
-          await fetchData(); // Carrega atividades salvas
-      atividades.add({
-        'tipo': tipo,
-        'valor': valor,
-        'duracaoMinutos': 60,
-        'data': DateTime.now().toIso8601String(),
-      });
-      // Convertendo a lista de atividades para JSON para armazenar como string
-      prefs.setString('atividades', json.encode(atividades));
+      final db = _indexedDb!;
+      final txn = db.transaction(table, idb.idbModeReadWrite);
+      final store = txn.objectStore(table);
+      await store.add(data);
+      await txn.completed;
     } else {
-      // Mobile: Armazenar no SQLite
-      final db = await getDatabase();
-      await db.insert('atividades', {
-        'tipo': tipo,
-        'valor': double.parse(valor),
-        'duracaoMinutos': 60,
-        'data': DateTime.now().toIso8601String(),
-      });
+      final db = _sqliteDb!;
+      await db.insert(table, data);
     }
   }
 
-  // Buscar dados do banco SQLite (ou SharedPreferences)
-  Future<List<Map<String, dynamic>>> fetchData() async {
+  @override
+  Future<List<Map<String, dynamic>>> getAll(String table) async {
+    await init(); // Garantindo que o banco foi inicializado
+
     if (kIsWeb) {
-      // Web: Recuperar do SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      String? data = prefs.getString('atividades');
-      if (data != null) {
-        // Convertendo de volta de String para List<Map>
-        List<dynamic> jsonData = json.decode(data);
-        return jsonData.map((item) => Map<String, dynamic>.from(item)).toList();
-      }
-      return [];
+      final db = _indexedDb!;
+      final txn = db.transaction(table, idb.idbModeReadOnly);
+      final store = txn.objectStore(table);
+      final allItems = await store.getAll();
+      await txn.completed;
+      return allItems.cast<Map<String, dynamic>>();
     } else {
-      // Mobile: Recuperar do SQLite
-      final db = await getDatabase();
-      return db.query('atividades');
+      final db = _sqliteDb!;
+      return db.query(table);
+    }
+  }
+
+  @override
+  Future<void> update(
+    String table,
+    Map<String, dynamic> data,
+    String where,
+    List whereArgs,
+  ) async {
+    await init(); // Garantindo que o banco foi inicializado
+
+    if (kIsWeb) {
+      // ID obrigatório para update no IndexedDB
+      if (!data.containsKey('id'))
+        throw Exception('ID necessário para update no Web!');
+
+      final db = _indexedDb!;
+      final txn = db.transaction(table, idb.idbModeReadWrite);
+      final store = txn.objectStore(table);
+      await store.put(data, data['id']);
+      await txn.completed;
+    } else {
+      final db = _sqliteDb!;
+      await db.update(table, data, where: where, whereArgs: whereArgs);
+    }
+  }
+
+  @override
+  Future<void> delete(String table, String where, List whereArgs) async {
+    await init(); // Garantindo que o banco foi inicializado
+
+    if (kIsWeb) {
+      final db = _indexedDb!;
+      final txn = db.transaction(table, idb.idbModeReadWrite);
+      final store = txn.objectStore(table);
+      var id = whereArgs.first;
+      await store.delete(id);
+      await txn.completed;
+    } else {
+      final db = _sqliteDb!;
+      await db.delete(table, where: where, whereArgs: whereArgs);
     }
   }
 }
