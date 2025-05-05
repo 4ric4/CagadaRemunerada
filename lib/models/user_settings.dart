@@ -28,7 +28,7 @@ class UserSettings {
   // Converte um mapa (recuperado do banco de dados) para um objeto UserSettings
   factory UserSettings.fromMap(Map<String, dynamic> map) {
     return UserSettings(
-      salarioMensal: map['salarioMensal'] ?? 0.0, // Verificando valores nulos
+      salarioMensal: map['salarioMensal'] ?? 0.0,
       diasTrabalho: map['diasTrabalho'] ?? 0,
       horasPorDia: map['horasPorDia'] ?? 0.0,
     );

@@ -47,45 +47,49 @@ class _CadastroSalarioState extends State<CadastroSalario>
   }
 
   Future<void> _salvar() async {
-    final salario = double.tryParse(_salarioController.text);
-    final dias = int.tryParse(_diasController.text);
-    final horas = double.tryParse(_horasController.text);
+    try {
+      final salario = double.tryParse(_salarioController.text);
+      final dias = int.tryParse(_diasController.text);
+      final horas = double.tryParse(_horasController.text);
 
-    if (salario != null && dias != null && horas != null) {
-      final settings = UserSettings(
-        salarioMensal: salario,
-        diasTrabalho: dias,
-        horasPorDia: horas,
-      );
-
-      // Salvar no banco de dados
-      final dbHelper = DatabaseHelper();
-      await dbHelper.insert("user_setting", {
-        "salario": salario,
-        "dias_trabalho": dias,
-        "horas_por_dia": horas,
-      });
-
-      widget.onSave(settings);
-
-      // Usar Future.delayed para atrasar a navegação
-      Future.delayed(Duration(milliseconds: 300), () {
-        // Navegar para a próxima tela após salvar
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder:
-                (context) => RegistroAtividades(
-                  userSettings: settings,
-                  onAdd: (atividade) {},
-                ),
-          ),
+      if (salario != null && dias != null && horas != null) {
+        final settings = UserSettings(
+          salarioMensal: salario,
+          diasTrabalho: dias,
+          horasPorDia: horas,
         );
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Preencha todos os campos corretamente")),
-      );
+
+        // Salvar no banco de dados
+        final dbHelper = DatabaseHelper();
+        await dbHelper.insert("user_setting", {
+          "salario": salario,
+          "dias_trabalho": dias,
+          "horas_por_dia": horas,
+        });
+
+        widget.onSave(settings);
+
+        // Usar Future.delayed para atrasar a navegação
+        Future.delayed(Duration(milliseconds: 300), () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => RegistroAtividades(
+                    userSettings: settings,
+                    onAdd: (atividade) {},
+                  ),
+            ),
+          );
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Preencha todos os campos corretamente")),
+        );
+      }
+    } catch (e) {
+      // Se houver um erro, logue ele
+      print("Erro ao salvar dados: $e");
     }
   }
 

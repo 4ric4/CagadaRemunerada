@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart' as sqflite;
 import 'package:idb_shim/idb.dart' as idb;
@@ -27,37 +26,34 @@ class DatabaseHelper implements StorageService {
   @override
   Future<void> init() async {
     if (kIsWeb) {
-      if (_indexedDb == null) {
-        _indexedDb = await _idbFactory.open(
-          'atividades_db',
-          version: 1,
-          onUpgradeNeeded: (e) {
-            final db = e.database;
-            if (!db.objectStoreNames.contains('atividades')) {
-              db.createObjectStore('atividades', autoIncrement: true);
-            }
-            if (!db.objectStoreNames.contains('user_setting')) {
-              db.createObjectStore('user_setting', autoIncrement: true);
-            }
-            if (!db.objectStoreNames.contains('historico')) {
-              db.createObjectStore('historico', autoIncrement: true);
-            }
-            if (!db.objectStoreNames.contains('cadastro_salario')) {
-              db.createObjectStore('cadastro_salario', autoIncrement: true);
-            }
-            if (!db.objectStoreNames.contains('registro_atividade')) {
-              db.createObjectStore('registro_atividade', autoIncrement: true);
-            }
-          },
-        );
-      }
+      _indexedDb ??= await _idbFactory.open(
+        'atividades_db',
+        version: 2,
+        onUpgradeNeeded: (e) {
+          final db = e.database;
+          if (!db.objectStoreNames.contains('atividades')) {
+            db.createObjectStore('atividades', autoIncrement: true);
+          }
+          if (!db.objectStoreNames.contains('user_setting')) {
+            db.createObjectStore('user_setting', autoIncrement: true);
+          }
+          if (!db.objectStoreNames.contains('historico')) {
+            db.createObjectStore('historico', autoIncrement: true);
+          }
+          if (!db.objectStoreNames.contains('cadastro_salario')) {
+            db.createObjectStore('cadastro_salario', autoIncrement: true);
+          }
+          if (!db.objectStoreNames.contains('registro_atividade')) {
+            db.createObjectStore('registro_atividade', autoIncrement: true);
+          }
+        },
+      );
     } else {
-      if (_sqliteDb == null) {
-        _sqliteDb = await sqflite.openDatabase(
-          'atividade.db',
-          version: 1,
-          onCreate: (db, version) async {
-            await db.execute('''
+      _sqliteDb ??= await sqflite.openDatabase(
+        'atividade.db',
+        version: 2, // Atualize a versão do banco de dados
+        onCreate: (db, version) async {
+          await db.execute('''
               CREATE TABLE atividades(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 tipo TEXT,
@@ -66,43 +62,56 @@ class DatabaseHelper implements StorageService {
                 data TEXT
               )
             ''');
-            await db.execute('''
-              CREATE TABLE user_setting(
+          await db.execute('''
+              CREATE TABLE user_setting (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                key TEXT,
-                value TEXT
+                salario REAL,
+                dias_trabalho INTEGER,
+                horas_por_dia REAL
               )
             ''');
-            await db.execute('''
+          await db.execute('''
               CREATE TABLE historico(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 descricao TEXT,
                 data TEXT
               )
             ''');
-            await db.execute('''
+          await db.execute('''
               CREATE TABLE cadastro_salario(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 salario REAL,
                 dataInicio TEXT
               )
             ''');
-            await db.execute('''
+          await db.execute('''
               CREATE TABLE registro_atividade(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 atividadeId INTEGER,
                 dataRegistro TEXT
               )
             ''');
-          },
-        );
-      }
+        },
+        onUpgrade: (db, oldVersion, newVersion) async {
+          if (oldVersion < 2) {
+            // Adicione aqui a criação das tabelas se estiverem faltando
+            await db.execute('''
+              CREATE TABLE IF NOT EXISTS user_setting (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                salario REAL,
+                dias_trabalho INTEGER,
+                horas_por_dia REAL
+              )
+            ''');
+          }
+        },
+      );
     }
   }
 
   @override
   Future<void> insert(String table, Map<String, dynamic> data) async {
-    await init(); // Garantindo que o banco foi inicializado
+    await init();
 
     if (kIsWeb) {
       final db = _indexedDb!;
@@ -144,8 +153,9 @@ class DatabaseHelper implements StorageService {
 
     if (kIsWeb) {
       // ID obrigatório para update no IndexedDB
-      if (!data.containsKey('id'))
+      if (!data.containsKey('id')) {
         throw Exception('ID necessário para update no Web!');
+      }
 
       final db = _indexedDb!;
       final txn = db.transaction(table, idb.idbModeReadWrite);
