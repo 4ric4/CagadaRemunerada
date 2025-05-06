@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dropdown_button2/dropdown_button2.dart'; // Adicionado
 import '../models/user_settings.dart';
 import '../models/atividade.dart';
 
@@ -69,31 +70,32 @@ class _RegistroAtividadesState extends State<RegistroAtividades> {
     });
   }
 
-  Widget _buildBotaoTipo(String tipo, double largura) {
+  Widget _buildBotaoTipo(String tipo) {
     final bool selecionado = _tipoSelecionado == tipo;
-    return SizedBox(
-      width: largura,
-      height: 60,
-      child: ElevatedButton(
-        onPressed: () {
-          setState(() => _tipoSelecionado = tipo);
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor:
-              selecionado ? Colors.greenAccent[400] : Colors.green[900],
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+    return Expanded(
+      child: SizedBox(
+        height: 50,
+        child: ElevatedButton(
+          onPressed: () {
+            setState(() => _tipoSelecionado = tipo);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor:
+                selecionado ? Colors.greenAccent[400] : Colors.green[900],
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
-        ),
-        child: Text(
-          tipo,
-          style: const TextStyle(
-            fontFamily: 'Montserrat',
-            fontWeight: FontWeight.w500,
-            fontSize: 16,
-            height: 1,
-            letterSpacing: 0,
+          child: Text(
+            tipo,
+            style: const TextStyle(
+              fontFamily: 'Montserrat',
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
+              height: 1,
+              letterSpacing: 0,
+            ),
           ),
         ),
       ),
@@ -103,15 +105,16 @@ class _RegistroAtividadesState extends State<RegistroAtividades> {
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
-    final double botaoLargura = isMobile ? double.infinity : 154;
     final double maxContainerWidth = isMobile ? double.infinity : 950;
     final EdgeInsetsGeometry padding =
         isMobile
             ? const EdgeInsets.all(16)
             : const EdgeInsets.symmetric(vertical: 32, horizontal: 24);
 
-    return Center(
-      child: SingleChildScrollView(
+    return Container(
+      width: double.infinity,
+      height: MediaQuery.of(context).size.height,
+      child: Center(
         child: Container(
           width: maxContainerWidth,
           padding: padding,
@@ -154,36 +157,49 @@ class _RegistroAtividadesState extends State<RegistroAtividades> {
                 ),
               ),
               const SizedBox(height: 20),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                alignment: WrapAlignment.center,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildBotaoTipo('Cagada', botaoLargura),
-                  _buildBotaoTipo('Mijada', botaoLargura),
-                  _buildBotaoTipo('Redes Sociais', botaoLargura),
+                  _buildBotaoTipo('Cagada'),
+                  const SizedBox(width: 8),
+                  _buildBotaoTipo('Mijada'),
+                  const SizedBox(width: 8),
+                  _buildBotaoTipo('Redes Sociais'),
                 ],
               ),
               const SizedBox(height: 20),
-              DropdownButtonFormField<String>(
-                decoration: InputDecoration(
-                  labelText: "Dia da Semana",
-                  border: const OutlineInputBorder(),
-                  labelStyle: TextStyle(
-                    fontFamily: 'Montserrat',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+              Container(
+                // Limita a altura do dropdown
+                constraints: BoxConstraints(maxHeight: 200),
+                child: DropdownButtonFormField2<String>(
+                  decoration: InputDecoration(
+                    labelText: "Dia da Semana",
+                    border: const OutlineInputBorder(),
+                    labelStyle: TextStyle(
+                      fontFamily: 'Montserrat',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
+                  isExpanded: true,
+                  value: _diaSelecionado,
+                  items:
+                      _diasSemana
+                          .map(
+                            (dia) => DropdownMenuItem(
+                              value: dia,
+                              child: Text(
+                                dia,
+                                style: const TextStyle(
+                                  fontFamily: 'Montserrat',
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                  onChanged: (valor) => setState(() => _diaSelecionado = valor),
                 ),
-                value: _diaSelecionado,
-                items:
-                    _diasSemana
-                        .map(
-                          (dia) =>
-                              DropdownMenuItem(value: dia, child: Text(dia)),
-                        )
-                        .toList(),
-                onChanged: (valor) => setState(() => _diaSelecionado = valor),
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -220,14 +236,8 @@ class _RegistroAtividadesState extends State<RegistroAtividades> {
                     ),
                   ),
                   child: const Text(
-                    'Registrar',
-                    style: TextStyle(
-                      fontFamily: 'Montserrat',
-                      fontWeight: FontWeight.w500,
-                      fontSize: 20,
-                      height: 1,
-                      letterSpacing: 0,
-                    ),
+                    'Registrar Atividade',
+                    style: TextStyle(fontFamily: 'Montserrat', fontSize: 16),
                   ),
                 ),
               ),
