@@ -32,6 +32,13 @@ class _RegistroAtividadesState extends State<RegistroAtividades> {
     'Sábado',
   ];
 
+  // Função para obter o dia atual da semana
+  String _diaAtual() {
+    final DateTime hoje = DateTime.now();
+    return _diasSemana[hoje.weekday %
+        7]; // O método weekday retorna 1 para segunda e assim por diante
+  }
+
   DateTime _ultimaOcorrencia(String dia) {
     int hoje = DateTime.now().weekday;
     int alvo = _diasSemana.indexOf(dia);
@@ -110,6 +117,11 @@ class _RegistroAtividadesState extends State<RegistroAtividades> {
         isMobile
             ? const EdgeInsets.all(16)
             : const EdgeInsets.symmetric(vertical: 32, horizontal: 24);
+
+    // Definir o dia atual como valor inicial
+    if (_diaSelecionado == null) {
+      _diaSelecionado = _diaAtual();
+    }
 
     return Container(
       width: double.infinity,
@@ -199,6 +211,9 @@ class _RegistroAtividadesState extends State<RegistroAtividades> {
                           )
                           .toList(),
                   onChanged: (valor) => setState(() => _diaSelecionado = valor),
+                  dropdownStyleData: DropdownStyleData(
+                    maxHeight: 3 * 48.0, // Mostra 3 dias visíveis
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -210,34 +225,26 @@ class _RegistroAtividadesState extends State<RegistroAtividades> {
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.access_time),
                     hintText: 'Tempo em minutos',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(width: 2),
-                    ),
-                    hintStyle: const TextStyle(
-                      fontFamily: 'Montserrat',
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
-              SizedBox(
-                width: isMobile ? double.infinity : 154,
-                height: 60,
-                child: ElevatedButton(
-                  onPressed: _registrar,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green[900],
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+              ElevatedButton(
+                onPressed: _registrar,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green[800],
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Text(
-                    'Registrar Atividade',
-                    style: TextStyle(fontFamily: 'Montserrat', fontSize: 16),
+                ),
+                child: const Text(
+                  'Registrar',
+                  style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
                 ),
               ),

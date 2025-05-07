@@ -20,7 +20,7 @@ class Atividade {
       tipo: map['tipo'],
       duracaoMinutos: map['duracaoMinutos'],
       data: DateTime.parse(map['data']),
-      valor: map['valor'],
+      valor: (map['valor'] != null ? (map['valor'] as num).toDouble() : 0.0),
     );
   }
 
