@@ -81,7 +81,9 @@ class DatabaseHelper implements StorageService {
               CREATE TABLE cadastro_salario(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 salario REAL,
-                dataInicio TEXT
+                dataInicio TEXT,
+                UNIQUE(salario, dataInicio)
+              )
               )
             ''');
           await db.execute('''

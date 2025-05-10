@@ -23,6 +23,8 @@ class _CadastroSalarioState extends State<CadastroSalario>
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
+  int _selectedIndex = 0; // Definindo o índice da navegação
+
   @override
   void initState() {
     super.initState();
@@ -69,18 +71,12 @@ class _CadastroSalarioState extends State<CadastroSalario>
 
         widget.onSave(settings);
 
-        // Usar Future.delayed para atrasar a navegação
+        // Usar Future.delayed para atrasar a navegação para RegistroAtividades
         Future.delayed(Duration(milliseconds: 300), () {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => RegistroAtividades(
-                    userSettings: settings,
-                    onAdd: (atividade) {},
-                  ),
-            ),
-          );
+          setState(() {
+            _selectedIndex =
+                0; // Atualizando o índice para a tela de RegistroAtividades
+          });
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -107,6 +103,13 @@ class _CadastroSalarioState extends State<CadastroSalario>
         borderSide: BorderSide(color: Color(0xFF1E4708), width: 2),
       ),
     );
+  }
+
+  // Função para alterar o índice do BottomNavigationBar
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
   @override
